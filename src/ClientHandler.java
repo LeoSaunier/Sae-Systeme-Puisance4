@@ -42,7 +42,7 @@ class ClientHandler implements Runnable {
                         out.println(Server.ask(playerName, opponent));
                         break;
                     case "accept":
-                        out.println(Server.accept(playerName, argument));
+                        out.println(Server.accept(playerName));
                         break;
                     case "reject":
                         out.println(Server.reject(playerName, argument));
