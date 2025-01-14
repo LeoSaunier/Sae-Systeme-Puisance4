@@ -69,7 +69,10 @@ class Server {
                 }
     
                 // Si la demande a été acceptée, elle sera supprimée
-                return "OK Lancement de la partie";
+                while (games.containsKey(playerName)) {
+                    waitingResponses.wait();
+                }
+                return "Vous pouvez proposer une nouvelle partie.";
             } catch (IOException e) {
                 return "ERR Impossible d'envoyer la demande à " + opponent;
             } catch (InterruptedException e) {
@@ -101,8 +104,17 @@ class Server {
             // Démarrer un nouveau thread pour la partie
             Thread partie = new Thread(new GameThread(game, players.get(playerName), players.get(demandeur)));
             partie.start();
+            while (games.containsKey(playerName)) {
+                try {
+                    waitingResponses.wait();
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+
     
-            return "OK Partie acceptée entre " + playerName + " et " + demandeur;
+            return "Vous pouvez proposer une nouvelle partie.";
         }
     }
 
