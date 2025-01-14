@@ -48,6 +48,12 @@ class Server {
             if (!players.containsKey(opponent)) {
                 return "ERR Adversaire non trouvé.";
             }
+            else if (waitingResponses.containsKey(playerName)) {
+                return "ERR Vous avez déjà une demande en attente.";
+            }
+            else if (opponent.equals(playerName)) {
+                return "ERR Vous ne pouvez pas jouer contre vous-même.";
+            }
     
             // Envoie une demande au joueur spécifié
             Socket opponentSocket = players.get(opponent);
