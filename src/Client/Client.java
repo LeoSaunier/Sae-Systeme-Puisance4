@@ -14,7 +14,7 @@ public class Client {
             System.out.println("Connecté au serveur Puissance 4.");
 
             // Lancer le thread de lecture
-            Thread readThread = new ReadThread(in, out, userInput);
+            Thread readThread = new ReadThread(in);
             // Lancer le thread d'écriture
             Thread writeThread = new WriteThread(out, userInput);
 
@@ -24,6 +24,12 @@ public class Client {
 
             // Attendre que le thread d'écriture se termine
             writeThread.join();
+
+            if(readThread.isAlive()) {
+                // Si le thread de lecture est encore actif, on l'interrompt
+                readThread.interrupt();
+            }
+            socket.close();
 
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();

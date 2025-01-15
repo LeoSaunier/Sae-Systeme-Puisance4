@@ -38,7 +38,7 @@ class Server {
         return String.join(", ", players.keySet());
     }
 
-    public static synchronized String disconnect(String playerName) {
+    public static synchronized String disconnect(String playerName) {  
         players.remove(playerName);
         return "OK";
     }
