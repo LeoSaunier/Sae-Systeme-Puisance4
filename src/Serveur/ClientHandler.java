@@ -47,7 +47,7 @@ class ClientHandler implements Runnable {
                         out.println(Server.accept(playerName));
                         break;
                     case "reject":
-                        out.println(Server.reject(playerName, argument));
+                        out.println(Server.reject(playerName));
                         break;
                     case "history":
                         out.println(String.join("\n", Server.getHistory(playerName)));

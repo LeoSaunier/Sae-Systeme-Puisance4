@@ -83,7 +83,7 @@ class Server {
             }
     
             try {
-                Thread.sleep(100); // Éviter un verrouillage actif
+                Thread.sleep(300); // Éviter un verrouillage actif
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return "ERR Interruption lors de l'attente.";
@@ -116,16 +116,30 @@ class Server {
     }
 
 
-    public static synchronized String reject(String playerName, String opponent) {
-        if (!waitingResponses.containsKey(playerName) || !waitingResponses.get(playerName).equals(opponent)) {
+    public static synchronized String reject(String playerName) {
+        // Vérification qu'une demande en attente existe pour ce joueur
+        if (!waitingResponses.containsKey(playerName)) {
             return "ERR Aucune demande valide trouvée.";
         }
-
+    
+        // Récupérer le nom du joueur qui a fait la demande
+        String demandeur = waitingResponses.get(playerName);
+    
+        // Retirer la demande en attente
         waitingResponses.remove(playerName);
-        games.remove(opponent);
-        waitingResponses.notifyAll();
+    
+        // Informer le joueur demandeur que sa demande a été rejetée
+        try {
+            Socket demandeurSocket = players.get(demandeur);
+            PrintWriter demandeurOut = new PrintWriter(demandeurSocket.getOutputStream(), true);
+            demandeurOut.println(playerName + " a rejeté votre demande.");
+        } catch (IOException e) {
+            return "ERR Impossible d'informer le demandeur.";
+        }
+    
         return "OK Demande refusée.";
     }
+    
 
     public static synchronized void addHistory(String playerName, String result) {
         history.get(playerName).add(result);

@@ -18,72 +18,105 @@ public class GameThread implements Runnable {
     public void run() {
         try {
             boolean player1Turn = true; // Détermine quel joueur doit jouer
-
+    
             while (!game.isGameOver()) {
                 // Vérifie si un joueur est déconnecté
                 if (isPlayerDisconnected(player1Socket)) {
                     notifyWin(player2Socket, "L'adversaire s'est déconnecté. Vous avez gagné !");
-
                     break;
                 }
                 if (isPlayerDisconnected(player2Socket)) {
                     notifyWin(player1Socket, "L'adversaire s'est déconnecté. Vous avez gagné !");
                     break;
                 }
-
+    
                 Socket currentPlayerSocket = player1Turn ? player1Socket : player2Socket;
                 Socket opponentSocket = player1Turn ? player2Socket : player1Socket;
                 String currentPlayer = player1Turn ? game.getPlayer1() : game.getPlayer2();
-
+    
                 try {
+                    // Envoi des mises à jour du jeu aux joueurs
                     game.sendGameUpdate(currentPlayerSocket, "C'est à vous de jouer ! Voici l'état du jeu :\n" + game.getBoard());
                     game.sendGameUpdate(opponentSocket, "L'adversaire joue. Voici l'état du jeu :\n" + game.getBoard());
-
-                    int move = getPlayerMove(currentPlayerSocket);
-                    if (game.makeMove(currentPlayer, move)) {
-                        player1Turn = !player1Turn;
-                    } else {
-                        game.sendGameUpdate(currentPlayerSocket, "Mouvement invalide. Essayez encore.");
+    
+                    // Boucle de lecture des commandes des joueurs
+                    while (true) {
+                        // Si c'est le tour du joueur, il peut envoyer une commande, sinon on ignore
+                        if (isPlayerDisconnected(currentPlayerSocket)) {
+                            notifyWin(opponentSocket, "L'adversaire s'est déconnecté. Vous avez gagné !");
+                            break;
+                        }
+    
+                        // Récupère le mouvement du joueur
+                        String result = getPlayerMove(currentPlayerSocket, currentPlayer);
+                        if (result.equals("OK")) {
+                            player1Turn = !player1Turn; // Changer de joueur
+                            break; // Quitter la boucle de lecture une fois qu'un mouvement valide a été fait
+                        } else {
+                            game.sendGameUpdate(currentPlayerSocket, result); // Envoyer l'erreur au joueur
+                        }
                     }
+    
+                    // Envoi d'une mise à jour de l'état du jeu
+                    game.sendGameUpdate(currentPlayerSocket, "Mouvement effectué. Voici l'état du jeu :\n" + game.getBoard());
+                    game.sendGameUpdate(opponentSocket, "L'adversaire a joué. Voici l'état du jeu :\n" + game.getBoard());
                 } catch (IOException e) {
                     handleDisconnection(opponentSocket, currentPlayer);
                     break;
                 }
             }
-
+    
             // Partie terminée, notifie les joueurs
             if (game.isGameOver()) {
                 game.sendGameUpdate(player1Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
                 game.sendGameUpdate(player2Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
             }
-
+    
             // Supprime la partie des parties en cours
             Server.endGame(game.getPlayer1(), game.getPlayer2());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
-
-    private int getPlayerMove(Socket playerSocket) throws IOException {
-        BufferedReader in = new BufferedReader(new InputStreamReader(playerSocket.getInputStream()));
-        String input = in.readLine();
-
-        if (input == null) {
-            throw new IOException("Le joueur s'est déconnecté.");
-        }
-
-        input = input.trim();
-        if (input.startsWith("mv ")) {
-            try {
-                return Integer.parseInt(input.split(" ")[1]) - 1;
-            } catch (NumberFormatException e) {
-                throw new IOException("Colonne invalide. Entrez un entier.");
+    
+    private String getPlayerMove(Socket playerSocket, String currentPlayer) {
+        try {
+            BufferedReader in = new BufferedReader(new InputStreamReader(playerSocket.getInputStream()));
+            String input = in.readLine();
+    
+            if (input == null) {
+                throw new IOException("Le joueur s'est déconnecté.");
             }
+    
+            input = input.trim();
+            
+            // Si ce n'est pas le tour du joueur
+            if (currentPlayer.equals(game.getPlayer1()) && !playerSocket.equals(player1Socket)) {
+                return "ERR Ce n'est pas votre tour de jouer.";
+            } else if (currentPlayer.equals(game.getPlayer2()) && !playerSocket.equals(player2Socket)) {
+                return "ERR Ce n'est pas votre tour de jouer.";
+            }
+    
+            // Vérification de la commande
+            if (input.startsWith("mv ")) {
+                try {
+                    int move = Integer.parseInt(input.split(" ")[1]) - 1;
+                    if (move < 0 || move >= game.getCols()) {
+                        return "ERR Colonne invalide. Essayez encore.";
+                    }
+                    game.makeMove(currentPlayer, move);
+                    return "OK"; // Mouvement valide
+                } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+                    return "ERR Colonne invalide. Essayez encore.";
+                }
+            }
+    
+            return "ERR Commande invalide. Utilisez 'mv <colonne>'.";
+        } catch (IOException e) {
+            return "ERR Erreur de communication.";
         }
-
-        throw new IOException("Commande invalide. Utilisez 'mv <colonne>'.");
     }
+    
 
     private boolean isPlayerDisconnected(Socket playerSocket) {
         try {
