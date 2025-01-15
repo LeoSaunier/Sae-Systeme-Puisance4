@@ -19,6 +19,8 @@ class ClientHandler implements Runnable {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
         ) {
             while (true) {
+                if(!Server.isPlayerInGame(playerName)) {
+                    
                 String input = in.readLine();
                 if (input == null) break;
 
@@ -53,6 +55,7 @@ class ClientHandler implements Runnable {
                     default:
                         out.println("ERR Commande inconnue.");
                 }
+            }
             }
         } catch (IOException e) {
             e.printStackTrace();

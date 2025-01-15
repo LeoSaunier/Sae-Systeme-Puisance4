@@ -43,55 +43,51 @@ class Server {
         return "OK";
     }
 
-    public static String ask(String playerName, String opponent){
+    public static String ask(String playerName, String opponent) {
         synchronized (waitingResponses) {
             if (!players.containsKey(opponent)) {
                 return "ERR Adversaire non trouvé.";
-            }
-            else if (waitingResponses.containsKey(playerName)) {
+            } else if (waitingResponses.containsKey(playerName)) {
                 return "ERR Vous avez déjà une demande en attente.";
-            }
-            else if (opponent.equals(playerName)) {
+            } else if (opponent.equals(playerName)) {
                 return "ERR Vous ne pouvez pas jouer contre vous-même.";
             }
     
-            // Envoie une demande au joueur spécifié
+            // Envoyer la demande
             Socket opponentSocket = players.get(opponent);
             try {
                 PrintWriter opponentOut = new PrintWriter(opponentSocket.getOutputStream(), true);
                 opponentOut.println(playerName + " vous invite à jouer une partie de Puissance 4.");
                 waitingResponses.put(opponent, playerName);
-    
-                long startTime = System.currentTimeMillis();
-                while (waitingResponses.containsKey(opponent)) {
-                    // Attendre jusqu'à 100 ms pour éviter un verrouillage actif
-                    waitingResponses.wait(100);
-    
-                    // Timeout après 30 secondes
-                    if (System.currentTimeMillis() - startTime > 30000) {
-                        waitingResponses.remove(opponent);
-                        return "ERR Temps écoulé. Demande annulée.";
-                    }
-                }
-    
-                // Si la demande a été acceptée, elle sera supprimée
             } catch (IOException e) {
                 return "ERR Impossible d'envoyer la demande à " + opponent;
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return "ERR Interruption lors de l'attente de la réponse.";
             }
         }
-        synchronized (games){
-            while (games.containsKey(playerName)) {
-                try {
-                    games.wait();
-                } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+    
+        // Attendre une réponse
+        long startTime = System.currentTimeMillis();
+        while (true) {
+            synchronized (waitingResponses) {
+                if (!waitingResponses.containsKey(opponent)) {
+                    // La demande a été traitée (acceptée ou refusée)
+                    return "Demande traitée.";
                 }
             }
-            return "Vous pouvez proposer une nouvelle partie.";
+    
+            // Vérifier le timeout (30 secondes)
+            if (System.currentTimeMillis() - startTime > 30000) {
+                synchronized (waitingResponses) {
+                    waitingResponses.remove(opponent); // Annuler la demande en attente
+                }
+                return "ERR Temps écoulé. Demande annulée.";
+            }
+    
+            try {
+                Thread.sleep(100); // Éviter un verrouillage actif
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return "ERR Interruption lors de l'attente.";
+            }
         }
     }
 
@@ -102,33 +98,21 @@ class Server {
                 return "ERR Demande invalide.";
             }
     
-            demandeur = waitingResponses.get(playerName);
-            waitingResponses.remove(playerName);
-    
-            // Notifier le thread en attente
-            waitingResponses.notifyAll();
+            demandeur = waitingResponses.remove(playerName); // Retirer la demande
         }
-
-        synchronized (games){
+    
+        synchronized (games) {
             Puissance4 game = new Puissance4(playerName, demandeur);
     
             // Associer cette partie aux deux joueurs
             games.put(playerName, game);
             games.put(demandeur, game);
+    
             Thread partie = new Thread(new GameThread(game, players.get(playerName), players.get(demandeur)));
             partie.start();
-            while (games.containsKey(playerName)) {
-                try {
-                    games.wait();
-                } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
-
-    
-            return "Vous pouvez proposer une nouvelle partie.";
         }
+    
+        return "OK Partie acceptée.";
     }
 
 
@@ -154,11 +138,15 @@ class Server {
     public static synchronized void endGame(String playerName, String opponent) {
         games.remove(playerName);
         games.remove(opponent);
-        games.notifyAll();
+        System.out.println("Partie terminée entre " + playerName + " et " + opponent + ".");
     }
 
     public static void releasePlayer(String playerName) {
         // Remet le joueur disponible pour d'autres interactions
         System.out.println("Le joueur " + playerName + " a été libéré et peut envoyer d'autres commandes.");
+    }
+
+    public static boolean isPlayerInGame(String playerName) {
+        return games.containsKey(playerName);
     }
 }
