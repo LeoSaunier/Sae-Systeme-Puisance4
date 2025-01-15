@@ -43,7 +43,7 @@ class Server {
         return "OK";
     }
 
-    public static String ask(String playerName, String opponent) {
+    public static String ask(String playerName, String opponent){
         synchronized (waitingResponses) {
             if (!players.containsKey(opponent)) {
                 return "ERR Adversaire non trouvé.";
@@ -75,10 +75,6 @@ class Server {
                 }
     
                 // Si la demande a été acceptée, elle sera supprimée
-                while (games.containsKey(playerName)) {
-                    waitingResponses.wait();
-                }
-                return "Vous pouvez proposer une nouvelle partie.";
             } catch (IOException e) {
                 return "ERR Impossible d'envoyer la demande à " + opponent;
             } catch (InterruptedException e) {
@@ -86,33 +82,44 @@ class Server {
                 return "ERR Interruption lors de l'attente de la réponse.";
             }
         }
+        synchronized (games){
+            while (games.containsKey(playerName)) {
+                try {
+                    games.wait();
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+            return "Vous pouvez proposer une nouvelle partie.";
+        }
     }
 
     public static String accept(String playerName) {
+        String demandeur;
         synchronized (waitingResponses) {
             if (!waitingResponses.containsKey(playerName)) {
                 return "ERR Demande invalide.";
             }
     
-            String demandeur = waitingResponses.get(playerName);
+            demandeur = waitingResponses.get(playerName);
             waitingResponses.remove(playerName);
     
             // Notifier le thread en attente
             waitingResponses.notifyAll();
-    
-            // Créer un nouvel objet Game pour la partie
+        }
+
+        synchronized (games){
             Puissance4 game = new Puissance4(playerName, demandeur);
     
             // Associer cette partie aux deux joueurs
             games.put(playerName, game);
             games.put(demandeur, game);
-    
-            // Démarrer un nouveau thread pour la partie
             Thread partie = new Thread(new GameThread(game, players.get(playerName), players.get(demandeur)));
             partie.start();
             while (games.containsKey(playerName)) {
                 try {
-                    waitingResponses.wait();
+                    games.wait();
                 } catch (InterruptedException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
@@ -132,6 +139,7 @@ class Server {
 
         waitingResponses.remove(playerName);
         games.remove(opponent);
+        waitingResponses.notifyAll();
         return "OK Demande refusée.";
     }
 
@@ -141,5 +149,11 @@ class Server {
 
     public static synchronized List<String> getHistory(String playerName) {
         return history.getOrDefault(playerName, Collections.emptyList());
+    }
+
+    public static synchronized void endGame(String playerName, String opponent) {
+        games.remove(playerName);
+        games.remove(opponent);
+        games.notifyAll();
     }
 }

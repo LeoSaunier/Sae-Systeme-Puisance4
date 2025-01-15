@@ -20,7 +20,15 @@ public void run() {
     try {
         boolean player1Turn = true; // Détermine quel joueur doit jouer
 
-        while (!game.isGameOver() && !isPlayerDisconnected(player1Socket) && !isPlayerDisconnected(player2Socket)) {
+        while (!game.isGameOver()) {
+            if (isPlayerDisconnected(player1Socket)){
+                game.sendGameUpdate(player2Socket, "L'adversaire s'est déconnecté. Vous avez gagné !");
+                break;
+            }
+            if (isPlayerDisconnected(player2Socket)){
+                game.sendGameUpdate(player1Socket, "L'adversaire s'est déconnecté. Vous avez gagné !");
+                break;
+            }
             if (player1Turn) {
                 // Tour du joueur 1
                 game.sendGameUpdate(player1Socket, "C'est à vous de jouer ! Voici l'état du jeu :\n" + game.getBoard());
@@ -49,20 +57,46 @@ public void run() {
         // Partie terminée
         game.sendGameUpdate(player1Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
         game.sendGameUpdate(player2Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
+        Server.endGame(game.getPlayer1(), game.getPlayer2());
     } catch (IOException e) {
         e.printStackTrace();
+    }finally {
+        try {
+            if (player1Socket != null && !player1Socket.isClosed()) {
+                player1Socket.close();
+            }
+            if (player2Socket != null && !player2Socket.isClosed()) {
+                player2Socket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
 
 
     private int getPlayerMove(Socket playerSocket) throws IOException {
         BufferedReader in = new BufferedReader(new InputStreamReader(playerSocket.getInputStream()));
-        try {
-            String input = in.readLine();
-            return Integer.parseInt(input.trim()); // Parse la colonne jouée
-        } catch (NumberFormatException e) {
-            return -1; // Retourne une valeur invalide si l'entrée n'est pas un entier
+        String input = in.readLine(); // Lire la commande du joueur
+
+        if (input == null) {
+            throw new IOException("Le joueur s'est déconnecté."); // Signaler une déconnexion
         }
+
+        input = input.trim(); // Nettoyer l'entrée
+
+        if (input.startsWith("mv ")) {
+            String[] parts = input.split(" "); // Diviser la commande
+            if (parts.length == 2) {
+                try {
+                    return Integer.parseInt(parts[1])-1; // Convertir la colonne en entier
+                } catch (NumberFormatException e) {
+                    return -1; // Entrée invalide si le chiffre n'est pas correct
+                }
+            }
+        }
+
+        return -1; // Commande invalide
     }
 
     private boolean isPlayerDisconnected(Socket playerSocket) {
