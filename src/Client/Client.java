@@ -2,10 +2,23 @@ import java.io.*;
 import java.net.*;
 
 public class Client {
-    private static final String SERVER_ADDRESS = "localhost";
-    private static final int SERVER_PORT = 30000;
+    
+        public static void main(String[] args) {
+            if (args.length < 2) {
+                System.out.println("Usage : java Client <server_address> <server_port>");
+                return;
+            }
+    
+            String SERVER_ADDRESS = args[0];
+            int SERVER_PORT;
 
-    public static void main(String[] args) {
+        try {
+            SERVER_PORT = Integer.parseInt(args[1]);
+        } catch (NumberFormatException e) {
+            System.out.println("Erreur : le port doit être un entier valide.");
+            return;
+        }
+
         try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
