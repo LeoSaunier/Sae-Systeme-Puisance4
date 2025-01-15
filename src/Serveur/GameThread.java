@@ -57,9 +57,7 @@ public class GameThread implements Runnable {
                         }
                     }
     
-                    // Envoi d'une mise à jour de l'état du jeu
-                    game.sendGameUpdate(currentPlayerSocket, "Mouvement effectué. Voici l'état du jeu :\n" + game.getBoard());
-                    game.sendGameUpdate(opponentSocket, "L'adversaire a joué. Voici l'état du jeu :\n" + game.getBoard());
+
                 } catch (IOException e) {
                     handleDisconnection(opponentSocket, currentPlayer);
                     break;
@@ -68,6 +66,8 @@ public class GameThread implements Runnable {
     
             // Partie terminée, notifie les joueurs
             if (game.isGameOver()) {
+                Server.addHistory(game.getPlayer1(), game.getPlayer2(), game.getWinner());
+                Server.addHistory(game.getPlayer2(), game.getPlayer1(), game.getWinner());
                 game.sendGameUpdate(player1Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
                 game.sendGameUpdate(player2Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
             }

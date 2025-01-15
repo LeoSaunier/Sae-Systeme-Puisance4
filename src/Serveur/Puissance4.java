@@ -127,4 +127,8 @@ public class Puissance4 {
         // TODO Auto-generated method stub
         this.gameOver = b;
     }
+
+    public String getWinner() {
+        return currentPlayer;
+    }
 }

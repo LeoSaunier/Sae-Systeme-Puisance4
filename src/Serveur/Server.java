@@ -141,8 +141,8 @@ class Server {
     }
     
 
-    public static synchronized void addHistory(String playerName, String result) {
-        history.get(playerName).add(result);
+    public static synchronized void addHistory(String playerName,String opponent, String result) {
+        history.get(playerName).add("Contre " + opponent + " Gagnant : " + result);
     }
 
     public static synchronized List<String> getHistory(String playerName) {
