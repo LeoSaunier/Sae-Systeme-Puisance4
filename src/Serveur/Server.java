@@ -156,4 +156,9 @@ class Server {
         games.remove(opponent);
         games.notifyAll();
     }
+
+    public static void releasePlayer(String playerName) {
+        // Remet le joueur disponible pour d'autres interactions
+        System.out.println("Le joueur " + playerName + " a été libéré et peut envoyer d'autres commandes.");
+    }
 }

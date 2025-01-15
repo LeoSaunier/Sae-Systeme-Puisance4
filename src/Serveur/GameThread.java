@@ -1,7 +1,6 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.Socket;
 
 public class GameThread implements Runnable {
@@ -16,96 +15,107 @@ public class GameThread implements Runnable {
     }
 
     @Override
-public void run() {
-    try {
-        boolean player1Turn = true; // Détermine quel joueur doit jouer
-
-        while (!game.isGameOver()) {
-            if (isPlayerDisconnected(player1Socket)){
-                game.sendGameUpdate(player2Socket, "L'adversaire s'est déconnecté. Vous avez gagné !");
-                break;
-            }
-            if (isPlayerDisconnected(player2Socket)){
-                game.sendGameUpdate(player1Socket, "L'adversaire s'est déconnecté. Vous avez gagné !");
-                break;
-            }
-            if (player1Turn) {
-                // Tour du joueur 1
-                game.sendGameUpdate(player1Socket, "C'est à vous de jouer ! Voici l'état du jeu :\n" + game.getBoard());
-                game.sendGameUpdate(player2Socket, "L'adversaire joue. Voici l'état du jeu :\n" + game.getBoard());
-
-                int move = getPlayerMove(player1Socket);
-                if (game.makeMove(game.getPlayer1(), move)) {
-                    player1Turn = false; // Passe au tour du joueur 2
-                } else {
-                    game.sendGameUpdate(player1Socket, "Mouvement invalide. Essayez encore.");
-                }
-            } else {
-                // Tour du joueur 2
-                game.sendGameUpdate(player1Socket, "L'adversaire joue. Voici l'état du jeu :\n" + game.getBoard());
-                game.sendGameUpdate(player2Socket, "C'est à vous de jouer ! Voici l'état du jeu :\n" + game.getBoard());
-
-                int move = getPlayerMove(player2Socket);
-                if (game.makeMove(game.getPlayer2(), move)) {
-                    player1Turn = true; // Passe au tour du joueur 1
-                } else {
-                    game.sendGameUpdate(player2Socket, "Mouvement invalide. Essayez encore.");
-                }
-            }
-        }
-
-        // Partie terminée
-        game.sendGameUpdate(player1Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
-        game.sendGameUpdate(player2Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
-        Server.endGame(game.getPlayer1(), game.getPlayer2());
-    } catch (IOException e) {
-        e.printStackTrace();
-    }finally {
+    public void run() {
         try {
-            if (player1Socket != null && !player1Socket.isClosed()) {
-                player1Socket.close();
+            boolean player1Turn = true; // Détermine quel joueur doit jouer
+
+            while (!game.isGameOver()) {
+                // Vérifie si un joueur est déconnecté
+                if (isPlayerDisconnected(player1Socket)) {
+                    notifyWin(player2Socket, "L'adversaire s'est déconnecté. Vous avez gagné !");
+
+                    break;
+                }
+                if (isPlayerDisconnected(player2Socket)) {
+                    notifyWin(player1Socket, "L'adversaire s'est déconnecté. Vous avez gagné !");
+                    break;
+                }
+
+                Socket currentPlayerSocket = player1Turn ? player1Socket : player2Socket;
+                Socket opponentSocket = player1Turn ? player2Socket : player1Socket;
+                String currentPlayer = player1Turn ? game.getPlayer1() : game.getPlayer2();
+
+                try {
+                    game.sendGameUpdate(currentPlayerSocket, "C'est à vous de jouer ! Voici l'état du jeu :\n" + game.getBoard());
+                    game.sendGameUpdate(opponentSocket, "L'adversaire joue. Voici l'état du jeu :\n" + game.getBoard());
+
+                    int move = getPlayerMove(currentPlayerSocket);
+                    if (game.makeMove(currentPlayer, move)) {
+                        player1Turn = !player1Turn;
+                    } else {
+                        game.sendGameUpdate(currentPlayerSocket, "Mouvement invalide. Essayez encore.");
+                    }
+                } catch (IOException e) {
+                    handleDisconnection(opponentSocket, currentPlayer);
+                    break;
+                }
             }
-            if (player2Socket != null && !player2Socket.isClosed()) {
-                player2Socket.close();
+
+            // Partie terminée, notifie les joueurs
+            if (game.isGameOver()) {
+                game.sendGameUpdate(player1Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
+                game.sendGameUpdate(player2Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
             }
+
+            // Supprime la partie des parties en cours
+            Server.endGame(game.getPlayer1(), game.getPlayer2());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-}
 
 
     private int getPlayerMove(Socket playerSocket) throws IOException {
         BufferedReader in = new BufferedReader(new InputStreamReader(playerSocket.getInputStream()));
-        String input = in.readLine(); // Lire la commande du joueur
+        String input = in.readLine();
 
         if (input == null) {
-            throw new IOException("Le joueur s'est déconnecté."); // Signaler une déconnexion
+            throw new IOException("Le joueur s'est déconnecté.");
         }
 
-        input = input.trim(); // Nettoyer l'entrée
-
+        input = input.trim();
         if (input.startsWith("mv ")) {
-            String[] parts = input.split(" "); // Diviser la commande
-            if (parts.length == 2) {
-                try {
-                    return Integer.parseInt(parts[1])-1; // Convertir la colonne en entier
-                } catch (NumberFormatException e) {
-                    return -1; // Entrée invalide si le chiffre n'est pas correct
-                }
+            try {
+                return Integer.parseInt(input.split(" ")[1]) - 1;
+            } catch (NumberFormatException e) {
+                throw new IOException("Colonne invalide. Entrez un entier.");
             }
         }
 
-        return -1; // Commande invalide
+        throw new IOException("Commande invalide. Utilisez 'mv <colonne>'.");
     }
 
     private boolean isPlayerDisconnected(Socket playerSocket) {
+        try {
+            playerSocket.sendUrgentData(0xFF); // Test la connexion du joueur
+            return false;
+        } catch (IOException e) {
+            return true;
+        }
+    }
+
+    private void handleDisconnection(Socket opponentSocket, String disconnectedPlayer) {
+        try {
+            if (opponentSocket != null && !opponentSocket.isClosed()) {
+                game.sendGameUpdate(opponentSocket, "L'adversaire (" + disconnectedPlayer + ") s'est déconnecté. Vous avez gagné !");
+                // Remettre le joueur dans le contexte général du serveur
+                Server.releasePlayer(disconnectedPlayer);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        game.setGameOver(true); // Met fin au jeu
+        Server.endGame(game.getPlayer1(), game.getPlayer2()); // Supprime la partie des parties en cours
+    }
+
+    private void notifyWin(Socket playerSocket, String message) {
     try {
-        PrintWriter out = new PrintWriter(playerSocket.getOutputStream(), true);
-        out.println("PING"); // Test si le joueur est toujours connecté
-        return false; // Le joueur est connecté
+        if (playerSocket != null && !playerSocket.isClosed()) {
+            game.sendGameUpdate(playerSocket, message);
+        }
     } catch (IOException e) {
-        return true; // Le joueur est déconnecté
+        e.printStackTrace();
     }
 }
 

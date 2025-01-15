@@ -122,4 +122,9 @@ public class Puissance4 {
     public String getPlayer2() {
         return player2;
     }
+
+    public void setGameOver(boolean b) {
+        // TODO Auto-generated method stub
+        this.gameOver = b;
+    }
 }
