@@ -74,8 +74,9 @@ public class GameThread implements Runnable {
             if (game.isGameOver()) {
                 Server.addHistory(game.getPlayer1(), game.getPlayer2(), game.getWinner());
                 Server.addHistory(game.getPlayer2(), game.getPlayer1(), game.getWinner());
-                game.sendGameUpdate(player1Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
-                game.sendGameUpdate(player2Socket, "La partie est terminée ! Voici l'état final du jeu :\n" + game.getBoard());
+                
+                game.sendGameUpdate(player1Socket, "La partie est terminée ! "+game.getWinner()+" à gagner ! Voici l'état final du jeu :\n" + game.getBoard());
+                game.sendGameUpdate(player2Socket, "La partie est terminée ! "+game.getWinner()+" à gagner ! Voici l'état final du jeu :\n" + game.getBoard());
             }
     
             // Supprime la partie des parties en cours
