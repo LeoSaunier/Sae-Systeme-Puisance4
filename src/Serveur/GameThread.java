@@ -110,8 +110,11 @@ public class GameThread implements Runnable {
                     if (move < 0 || move >= game.getCols()) {
                         return "ERR Colonne invalide. Essayez encore.";
                     }
-                    game.makeMove(currentPlayer, move);
+                    if (game.makeMove(currentPlayer, move)){
                     return "OK"; // Mouvement valide
+                    } else {
+                        return "ERR Colonne pleine. Essayez encore.";
+                    }
                 } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
                     return "ERR Colonne invalide. Essayez encore.";
                 }

@@ -24,6 +24,19 @@ public class Puissance4 {
         this.gameOver = false;
     }
 
+    public boolean isColumnFull(int col) {
+        return board[0][col] != '.';
+    }
+
+    public boolean isBoardFull() {
+        for (int i = 0; i < COLS; i++) {
+            if (board[0][i] == '.') {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public boolean makeMove(String player, int col) {
         if (gameOver) return false;
 
@@ -50,10 +63,11 @@ public class Puissance4 {
         board[row][col] = currentPlayer.equals(player1) ? 'X' : 'O';
 
         // Vérifier la victoire
-        if (checkWin(row, col)) {
+        if (checkWin(row, col) || isBoardFull()) {
             gameOver = true;
             return true;
         }
+        
 
         // Changer de joueur
         currentPlayer = currentPlayer.equals(player1) ? player2 : player1;
@@ -129,6 +143,9 @@ public class Puissance4 {
     }
 
     public String getWinner() {
+        if(isBoardFull()) {
+            return "Match nul !";
+        }
         return currentPlayer;
     }
 }
