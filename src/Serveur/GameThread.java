@@ -33,6 +33,7 @@ public class GameThread implements Runnable {
                 Socket currentPlayerSocket = player1Turn ? player1Socket : player2Socket;
                 Socket opponentSocket = player1Turn ? player2Socket : player1Socket;
                 String currentPlayer = player1Turn ? game.getPlayer1() : game.getPlayer2();
+                String opponent = player1Turn ? game.getPlayer2() : game.getPlayer1();
     
                 try {
                     // Envoi des mises à jour du jeu aux joueurs
@@ -43,7 +44,12 @@ public class GameThread implements Runnable {
                     while (true) {
                         // Si c'est le tour du joueur, il peut envoyer une commande, sinon on ignore
                         if (isPlayerDisconnected(currentPlayerSocket)) {
-                            notifyWin(opponentSocket, "L'adversaire s'est déconnecté. Vous avez gagné !");
+                            Server.addHistory(opponent, currentPlayer, opponent);
+                            break;
+                        }
+
+                        if (isPlayerDisconnected(opponentSocket)) {
+                            Server.addHistory(currentPlayer, opponent, currentPlayer);
                             break;
                         }
     

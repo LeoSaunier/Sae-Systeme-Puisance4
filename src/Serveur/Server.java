@@ -16,8 +16,9 @@ class Server {
 
 
     public static void main(String[] args) throws IOException {
-        ServerSocket serverSocket = new ServerSocket(30000);
-        System.out.println("Serveur en attente de connexions sur le port 12345...");
+        int ServerPort = 30000;
+        ServerSocket serverSocket = new ServerSocket(ServerPort);
+        System.out.println("Serveur en attente de connexions sur le port "+ServerPort+"...");
 
         while (true) {
             Socket clientSocket = serverSocket.accept();
@@ -51,6 +52,9 @@ class Server {
                 return "ERR Vous avez déjà une demande en attente.";
             } else if (opponent.equals(playerName)) {
                 return "ERR Vous ne pouvez pas jouer contre vous-même.";
+            }
+            else if (isPlayerInGame(opponent)) {
+                return "ERR " + opponent + " est déjà en partie.";
             }
     
             // Envoyer la demande
