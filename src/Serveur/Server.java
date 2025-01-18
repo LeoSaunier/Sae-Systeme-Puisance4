@@ -16,7 +16,18 @@ class Server {
 
 
     public static void main(String[] args) throws IOException {
-        int ServerPort = 30000;
+        if (args.length < 1) {
+            System.out.println("Usage : java Server <port>");
+            return;
+        }
+
+        int ServerPort;
+        try {
+            ServerPort = Integer.parseInt(args[0]);
+        } catch (NumberFormatException e) {
+            System.out.println("Erreur : le port doit être un entier valide.");
+            return;
+        }
         ServerSocket serverSocket = new ServerSocket(ServerPort);
         System.out.println("Serveur en attente de connexions sur le port "+ServerPort+"...");
 
