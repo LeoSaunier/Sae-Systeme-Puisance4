@@ -34,3 +34,11 @@ La commande ``history`` te permet de voir l'historique de tes parties. Elle est 
 
 Pour finir la commande ``mv`` te permet de placer une piece pendant une partie en faisant ``mv <Nom de la colonne>``. 
 
+### Justification des choix techniques :
+
+Afin que l'on puisse recevoir les notifications de façon dynamique nous avons créer deux Thread pour le client un qui s'occuper de l'écriture donc de l'envoie et un autre qui va lui s'occuper de l'affichage que le serveur lui envoi.
+
+Pour le serveur nous avons décider de créer un thread qui va s'occuper de traiter ce que le client lui envoi afin de le rediriger vers les bonnes commandes, et quand le client est en partie un autre Thread conçu pour pouvoir gérer la partie le prend en charge. Cela permet aussi à ce qu'il y est plus d'une partie sur le même serveur.
+
+
+![d](https://github.com/user-attachments/assets/ab2d92c7-bdc0-49ae-b1d0-e10fe18027a9)
